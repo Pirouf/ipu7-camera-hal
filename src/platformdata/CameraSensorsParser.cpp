@@ -778,6 +778,28 @@ std::string CameraSensorsParser::resolveI2CBusString(const std::string& name) {
     if (pos != std::string::npos) {
         res.replace(pos, sizeof("$CSI_PORT"), mCsiPort);
     }
+    pos = res.find("$CSI_SUFFIX");
+    if (pos != std::string::npos) {
+        // csi index to suffix 0,1,2,3,4,5 -> a,b,c,d,e,f
+        std::string mCsiSuffix(1, 'a');
+	mCsiSuffix[0] += std::stoi(mCsiPort);
+	res.replace(pos, sizeof("$CSI_SUFFIX"), mCsiSuffix);
+    }
+    int mCapNum = (std::atoi(mCsiPort.c_str()) * NR_OF_CSI2_SRC_PADS * 2);
+    pos = res.find("$CAP_16N_");
+    if (pos != std::string::npos) {
+      int offNum = std::stoi(res.substr((res.find_last_of('_') + 1), sizeof(res)));
+      mCapNum += offNum;
+      res.replace(pos, sizeof("$CAP_16N_X"), std::to_string(mCapNum));
+      LOG1("%s: force initial mI2CBus=%s, mCsiPort=%s, mCapNum=%d (offNum=%d)", __func__,
+	   mI2CBus.c_str(), mCsiPort.c_str(), mCapNum, offNum);
+    }
+    pos = res.find("$CAP_16N");
+    if (pos != std::string::npos) {
+      res.replace(pos, sizeof("$CAP_16N"), std::to_string(mCapNum));
+      LOG1("%s: force initial mI2CBus=%s, mCsiPort=%s, mCapNum=%d", __func__,
+	   mI2CBus.c_str(), mCsiPort.c_str(), mCapNum);
+    }
     pos = res.find("$CAP_N");
     if (pos != std::string::npos) {
         res.replace(pos, sizeof("$CAP_N"),
@@ -790,9 +812,29 @@ std::string CameraSensorsParser::resolveI2CBusString(const std::string& name) {
 void CameraSensorsParser::parseSensorSection(const Json::Value& node) {
     if (node.isMember("name")) {
         mCurCam->sensorName = node["name"].asString();
+
+	// provide namespacing fallback for GMSL a,b,c,d link-aggreagation
+	resolveCsiPortAndI2CBus();
+        if ((mI2CBus.size() < 2) &&
+	    (mCurCam->sensorName.find_last_of('-')  != std::string::npos)) {
+	  std::string sensorSuffix = mCurCam->sensorName.substr(0, (mCurCam->sensorName.find_last_of('-')));
+	  auto pos = sensorSuffix.find_last_of('-');
+	  if (pos != std::string::npos && pos < sizeof(sensorSuffix)) {
+	    mI2CBus = sensorSuffix.substr(pos+1,1) + '-' +  mCsiPort;
+	    LOG1("%s: force initial mI2CBus=%s, mCsiPort=%s", __func__,
+		 mI2CBus.c_str(), mCsiPort.c_str());
+	  }
+	  mSensorInfo.sensorResolved = false;
+	}
+	mCurCam->sensorName=resolveI2CBusString(node["name"].asString());
+	LOG1("%s: sensor-name=%s, mCsiPort=%s, mI2CBus=%s", __func__,
+	     mCurCam->sensorName.c_str(),
+	     mCsiPort.c_str(),
+	     mI2CBus.c_str());
+
     }
     if (node.isMember("description")) {
-        mCurCam->sensorDescription = node["description"].asString();
+        mCurCam->sensorDescription = resolveI2CBusString(node["description"].asString());
     }
     // VIRTUAL_CHANNEL_S
     if (node.isMember("vcCount")) {

@@ -128,6 +128,31 @@ std::vector<std::pair<std::string, SensorInfo>> CameraParserInvoker::getAvailabl
             std::string sensorName = sensor.substr(0, sensor.find_first_of('-'));
             std::string sensorOutName = sensor.substr(0, sensor.find_last_of('-'));
 
+	    // sensors out name with suffix matches gmsl aggregated-link input
+	    std::string sensorOutSuffix = "";
+	    if (sensorOutName.find("-") != std::string::npos) {
+	      sensorOutSuffix = sensorOutName.substr(sensorOutName.find_last_of('-')+1, 1);
+
+	      if (sensorOutSuffix.size() == 1 &&
+		  sensorOutSuffix[0] >= 'a' &&
+		  sensorOutSuffix[0] <= 'h') {
+
+		// lowercase aggregated-link ASCII letter
+		std::string sensorNameWithSuffix = sensorName + ' ' + sensorOutSuffix + '-' + portNum;
+
+		if (mMediaCtl && mMediaCtl->checkAvailableSensor( sensorNameWithSuffix )) {
+		  SensorInfo sensorInfo = {sensorSinkNameWithPort, false};
+		  availableSensors.push_back({sensorOutName, sensorInfo});
+		  LOG1("@%s, found %s, sensorSinkNameWithPort=%s, sensorOutName=%s, sensorSinkNameWithPort=%s", __func__,
+		       sensorName.c_str(),
+		       sensorNameWithSuffix.c_str(),
+		       sensorOutName.c_str(),
+		       sensorSinkNameWithPort.c_str());
+		}
+		continue;
+	      }
+	    }
+
             if (mMediaCtl && mMediaCtl->checkAvailableSensor(sensorName, sensorSinkNameWithPort)) {
                 SensorInfo sensorInfo = {sensorSinkNameWithPort, false};
                 availableSensors.push_back({sensorOutName, sensorInfo});
