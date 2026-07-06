@@ -99,6 +99,33 @@
           },
         ],
       },
+      {
+        "id": 2, "graphId": 100005,
+        "pipe_executors": [
+          {
+            "name": "video_lb",
+            "nodes": [
+              "lbff",
+              "bbps",
+            ],
+          },
+          {
+            "name": "video_bb",
+            "nodes": [
+              "post_1",
+              "post_2",
+            ],
+          },
+          {
+            "name": "still_full",
+            "nodes": [
+              "lbff1",
+              "bbps1",
+              "post_0",
+            ],
+          },
+        ],
+      },
     ],
   }
 }
