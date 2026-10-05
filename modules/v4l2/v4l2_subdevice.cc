@@ -117,12 +117,21 @@ int V4L2Subdevice::GetPadFormat(int pad_index, int* width, int* height, int* cod
     struct v4l2_subdev_format format = {};
 
     format.pad = pad_index;
+    format.stream = 0;
     format.which = V4L2_SUBDEV_FORMAT_ACTIVE;
     int ret = GetFormat(&format);
     if (ret == 0) {
         *width = format.format.width;
         *height = format.format.height;
         *code = format.format.code;
+    } else {
+        format.stream = 1;
+        ret = GetFormat(&format);
+        if (ret == 0) {
+            *width = format.format.width;
+            *height = format.format.height;
+            *code = format.format.code;
+	}
     }
     return ret;
 }
